@@ -102,6 +102,8 @@ class ProtectionInfo:
 class SummaryExtraction:
     """Complete extraction result from the summary page."""
 
+    document_date: str
+    advisor_name: str
     insured: InsuredInfo
     protections: list[ProtectionInfo]
     total_annual_premium: str
@@ -125,6 +127,52 @@ COLUMN_BOUNDARIES = {
 # =============================================================================
 # PARSING FUNCTIONS
 # =============================================================================
+
+
+def extract_document_date(pdf: pdfplumber.PDF) -> str | None:
+    """
+    Extract the document date from the PDF.
+
+    Looks for "Date:" followed by the date string (e.g., "17 novembre 2025").
+
+    Args:
+        pdf: pdfplumber PDF object
+
+    Returns:
+        Date string or None if not found
+    """
+    for page in pdf.pages:
+        text = page.extract_text() or ""
+
+        # Pattern: "Date: 17 novembre 2025" or similar
+        match = re.search(r"Date\s*:\s*(.+?)(?:\n|$)", text)
+        if match:
+            return match.group(1).strip()
+
+    return None
+
+
+def extract_advisor_name(pdf: pdfplumber.PDF) -> str | None:
+    """
+    Extract the advisor name from the PDF.
+
+    Looks for "Votre conseiller :" followed by the advisor name.
+
+    Args:
+        pdf: pdfplumber PDF object
+
+    Returns:
+        Advisor name or None if not found
+    """
+    for page in pdf.pages:
+        text = page.extract_text() or ""
+
+        # Pattern: "Votre conseiller : NAME"
+        match = re.search(r"Votre conseiller\s*:\s*(.+?)(?:\n|$)", text)
+        if match:
+            return match.group(1).strip()
+
+    return None
 
 
 def parse_insured_line(text: str) -> InsuredInfo | None:
@@ -329,7 +377,11 @@ def extract_summary_with_pdfplumber(pdf_path: Path) -> SummaryExtraction | None:
         SummaryExtraction object or None if extraction fails
     """
     with pdfplumber.open(pdf_path) as pdf:
-        # Step 1: Find the summary page
+        # Step 1: Extract document date and advisor name
+        document_date = extract_document_date(pdf) or ""
+        advisor_name = extract_advisor_name(pdf) or ""
+
+        # Step 2: Find the summary page
         summary_page = None
         for page in pdf.pages:
             text = page.extract_text() or ""
@@ -341,11 +393,11 @@ def extract_summary_with_pdfplumber(pdf_path: Path) -> SummaryExtraction | None:
             print(f"Warning: 'SOMMAIRE DES PROTECTIONS' page not found in {pdf_path.name}")
             return None
 
-        # Step 2: Extract words and group by lines
+        # Step 3: Extract words and group by lines
         words = summary_page.extract_words()
         lines = group_words_by_line(words)
 
-        # Step 3: Process each line
+        # Step 4: Process each line
         insured_info: InsuredInfo | None = None
         protections: list[ProtectionInfo] = []
         total_annual_premium = ""
@@ -421,6 +473,8 @@ def extract_summary_with_pdfplumber(pdf_path: Path) -> SummaryExtraction | None:
             return None
 
         return SummaryExtraction(
+            document_date=document_date,
+            advisor_name=advisor_name,
             insured=insured_info,
             protections=protections,
             total_annual_premium=total_annual_premium,
@@ -445,6 +499,7 @@ def summary_to_dataframe(extraction: SummaryExtraction) -> pd.DataFrame:
 
     Returns:
         DataFrame with columns:
+        - advisor_name
         - last_name, first_name, sex, birth_date, age, smoker
         - protection_name, insurance_amount, annual_premium, monthly_premium, details
     """
@@ -452,6 +507,8 @@ def summary_to_dataframe(extraction: SummaryExtraction) -> pd.DataFrame:
 
     for prot in extraction.protections:
         row = {
+            "document_date": extraction.document_date,
+            "advisor_name": extraction.advisor_name,
             "last_name": extraction.insured.last_name,
             "first_name": extraction.insured.first_name,
             "sex": extraction.insured.sex,
@@ -524,11 +581,11 @@ def extract_to_dataframe(pdf_path: str | Path) -> pd.DataFrame:
 
 def main():
     """Main entry point for testing."""
-    pdf_dir = Path(__file__).parent.parent / "pdf"
-    pdf_files = sorted(pdf_dir.glob("RI-UV-*.pdf"))  # Only UV PDFs
+    pdf_dir = Path(__file__).parent.parent / "pdf" / "uv"
+    pdf_files = sorted(pdf_dir.glob("*.pdf"))  # All PDFs in uv folder
 
     if not pdf_files:
-        print("No UV PDF files found in pdf/ folder")
+        print("No UV PDF files found in pdf/uv/ folder")
         return
 
     for pdf_path in pdf_files:
@@ -542,6 +599,8 @@ def main():
             print("  -> Extraction failed")
             continue
 
+        print(f"\nDocument date: {extraction.document_date}")
+        print(f"Advisor: {extraction.advisor_name}")
         print(f"\nInsured: {extraction.insured.first_name} {extraction.insured.last_name}")
         print(f"  Sex: {extraction.insured.sex}")
         print(f"  Birth date: {extraction.insured.birth_date}")
