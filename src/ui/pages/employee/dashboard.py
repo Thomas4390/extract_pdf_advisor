@@ -12,8 +12,6 @@ from ui.components import (
     render_empty_state,
     render_stat_card,
     render_board_card,
-    render_gradient_header,
-    render_info_box,
     render_divider,
     render_api_key_input
 )
@@ -53,12 +51,10 @@ def render_employee_dashboard() -> None:
     user_boards = [b for b in all_boards if b['id'] in assigned_board_ids]
 
     # Render view based on selection
-    if st.session_state.employee_view == 'dashboard':
-        _render_dashboard_view(user, user_boards)
-    elif st.session_state.employee_view == 'illustrations':
+    if st.session_state.employee_view == 'illustrations':
         _render_illustrations_view(user, user_boards)
     else:
-        _render_add_data_view(user, user_boards)
+        _render_dashboard_view(user, user_boards)
 
 
 def _render_sidebar(user) -> None:
@@ -82,19 +78,11 @@ def _render_sidebar(user) -> None:
             st.rerun()
 
         if st.button(
-            "📄 Illustrations PDF",
+            "📄 Uploader PDF",
             width="stretch",
             type="primary" if st.session_state.employee_view == 'illustrations' else "secondary"
         ):
             st.session_state.employee_view = 'illustrations'
-            st.rerun()
-
-        if st.button(
-            "➕ Ajouter des donnees",
-            width="stretch",
-            type="primary" if st.session_state.employee_view == 'add_data' else "secondary"
-        ):
-            st.session_state.employee_view = 'add_data'
             st.rerun()
 
         st.markdown("<div style='margin-top: 2rem;'></div>", unsafe_allow_html=True)
@@ -162,70 +150,8 @@ def _render_dashboard_view(user, user_boards: list) -> None:
                                 f"- Items: {details['items_count']}"
                             )
 
-
-def _render_add_data_view(user, user_boards: list) -> None:
-    """Render view for adding data to boards."""
-    render_gradient_header(
-        "Ajouter des donnees",
-        "Selectionnez un board pour y ajouter des informations"
-    )
-
-    if not user_boards:
-        st.warning("Aucun board disponible.")
-        return
-
-    # Board selection
-    st.markdown("### 1. Selectionner un board")
-
-    board_options = {b['id']: b['name'] for b in user_boards}
-
-    selected_id = st.selectbox(
-        "Board de destination",
-        options=list(board_options.keys()),
-        format_func=lambda x: board_options.get(x, x),
-        key="employee_board_select"
-    )
-
-    if selected_id:
-        st.session_state.selected_board_id = selected_id
-        selected_board = next((b for b in user_boards if b['id'] == selected_id), None)
-
-        if selected_board:
-            render_info_box(f"✓ Board selectionne: <strong>{selected_board['name']}</strong>")
-
-            render_divider()
-
-            st.markdown("### 2. Informations du board")
-
-            monday = MondayIntegration(api_key=st.session_state.monday_api_key)
-
-            with st.spinner("Chargement des details..."):
-                details = monday.get_board_details(selected_id)
-
-                if details:
-                    col1, col2 = st.columns(2)
-
-                    with col1:
-                        st.metric("Groupes", details['groups_count'])
-
-                    with col2:
-                        st.metric("Items", details['items_count'])
-
-                    if details['groups']:
-                        st.markdown("#### Groupes disponibles")
-                        for group in details['groups']:
-                            st.markdown(f"- {group['title']}")
-
-            render_divider()
-
-            st.markdown("### 3. Ajouter des donnees")
-
-            render_info_box(
-                "ℹ️ Cette fonctionnalite sera disponible prochainement.<br>"
-                "Vous pourrez uploader des fichiers PDF ou entrer des donnees manuellement."
-            )
-
-    # Change password in expander
+    # Change password section
+    render_divider()
     _render_password_change_expander(user)
 
 

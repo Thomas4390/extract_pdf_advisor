@@ -19,6 +19,7 @@ from ui.components import (
     render_divider,
     render_stat_card,
 )
+from config import ROLE_ADMIN
 
 
 def render_illustrations_page(user, user_boards: list) -> None:
@@ -39,7 +40,7 @@ def render_illustrations_page(user, user_boards: list) -> None:
 
     # Render based on current stage
     if st.session_state.illustration_stage == 1:
-        _render_stage_upload(user_boards)
+        _render_stage_upload(user, user_boards)
     elif st.session_state.illustration_stage == 2:
         _render_stage_preview()
     elif st.session_state.illustration_stage == 3:
@@ -127,7 +128,7 @@ def _render_stepper() -> None:
     st.write("")
 
 
-def _render_stage_upload(user_boards: list) -> None:
+def _render_stage_upload(user, user_boards: list) -> None:
     """Render stage 1: PDF upload and configuration."""
     _render_stepper()
 
@@ -163,20 +164,25 @@ def _render_stage_upload(user_boards: list) -> None:
     # Board selection
     st.markdown("### 2. Destination Monday.com")
 
-    # Option to create new board
-    create_new_board = st.checkbox(
-        "Creer un nouveau board",
-        value=st.session_state.get('illustration_create_new_board', False),
-        key="illustration_create_new_board_checkbox",
-        help="Cochez pour creer un nouveau board au lieu d'utiliser un board existant"
-    )
+    # Check if user is admin (only admins can create new boards)
+    is_admin = user.role == ROLE_ADMIN
 
     selected_board_id = None
     selected_board_name = ""
     new_board_name = None
+    create_new_board = False
 
-    if create_new_board:
-        # New board creation
+    if is_admin:
+        # Option to create new board (admin only)
+        create_new_board = st.checkbox(
+            "Creer un nouveau board",
+            value=st.session_state.get('illustration_create_new_board', False),
+            key="illustration_create_new_board_checkbox",
+            help="Cochez pour creer un nouveau board au lieu d'utiliser un board existant"
+        )
+
+    if create_new_board and is_admin:
+        # New board creation (admin only)
         new_board_name = st.text_input(
             "Nom du nouveau board",
             placeholder="Ex: Illustrations Assurance 2025",
@@ -190,7 +196,7 @@ def _render_stage_upload(user_boards: list) -> None:
     else:
         # Existing board selection
         if not user_boards:
-            st.warning("Aucun board disponible. Contactez votre administrateur ou creez un nouveau board.")
+            st.warning("Aucun board disponible. Contactez votre administrateur.")
             return
 
         board_options = {b['id']: b['name'] for b in user_boards}
