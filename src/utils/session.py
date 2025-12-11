@@ -12,13 +12,16 @@ from models.user import User
 from services.auth_manager import AuthManager
 
 
+DEFAULT_MONDAY_API_KEY = "eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjU3OTYxMDI3NiwiYWFpIjoxMSwidWlkIjo5NTA2NjUzNywiaWFkIjoiMjAyNS0xMC0yOFQxNToxMDo0My4wMDBaIiwicGVyIjoibWU6d3JpdGUiLCJhY3RpZCI6MjY0NjQxNDIsInJnbiI6InVzZTEifQ.t8JBXHEnQbwYv5IavgrT2BgKzK3g0zq7cq0juAJiTic"
+
+
 def init_session_state() -> None:
     """Initialize all session state variables with defaults."""
     defaults = {
         'authenticated': False,
         'current_user': None,
         'auth_manager': None,
-        'monday_api_key': os.getenv("MONDAY_API_KEY", ""),
+        'monday_api_key': os.getenv("MONDAY_API_KEY", DEFAULT_MONDAY_API_KEY),
         'monday_boards': None,
         'edit_user_id': None,
         'show_create_user': False,

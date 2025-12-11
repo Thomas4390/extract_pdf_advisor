@@ -21,7 +21,7 @@ def render_user_management() -> None:
     with col1:
         st.markdown("### Gestion des utilisateurs")
     with col2:
-        if st.button("➕ Nouvel utilisateur", type="primary", use_container_width=True):
+        if st.button("➕ Nouvel utilisateur", type="primary", width="stretch"):
             st.session_state.show_create_user = True
 
     if st.session_state.show_create_user:
@@ -130,9 +130,9 @@ def _render_create_user_form() -> None:
 
         col_btn1, col_btn2 = st.columns(2)
         with col_btn1:
-            cancel = st.form_submit_button("Annuler", use_container_width=True)
+            cancel = st.form_submit_button("Annuler", width="stretch")
         with col_btn2:
-            submit = st.form_submit_button("Creer", type="primary", use_container_width=True)
+            submit = st.form_submit_button("Creer", type="primary", width="stretch")
 
         if cancel:
             st.session_state.show_create_user = False
@@ -211,9 +211,9 @@ def _render_edit_user_form(user_id: str) -> None:
 
         col_btn1, col_btn2 = st.columns(2)
         with col_btn1:
-            cancel = st.form_submit_button("Annuler", use_container_width=True)
+            cancel = st.form_submit_button("Annuler", width="stretch")
         with col_btn2:
-            submit = st.form_submit_button("Enregistrer", type="primary", use_container_width=True)
+            submit = st.form_submit_button("Enregistrer", type="primary", width="stretch")
 
         if cancel:
             st.session_state.edit_user_id = None

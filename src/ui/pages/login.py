@@ -65,7 +65,7 @@ def render_login_page() -> None:
                 submitted = st.form_submit_button(
                     "🚀 Se connecter",
                     type="primary",
-                    use_container_width=True
+                    width="stretch"
                 )
 
                 if submitted:

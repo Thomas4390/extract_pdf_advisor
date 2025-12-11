@@ -171,6 +171,69 @@ class UnifiedExtraction:
 
 
 # =============================================================================
+# DATE PARSING UTILITIES
+# =============================================================================
+
+# French month names for parsing
+FRENCH_MONTHS = {
+    "janvier": 1, "février": 2, "fevrier": 2, "mars": 3, "avril": 4,
+    "mai": 5, "juin": 6, "juillet": 7, "août": 8, "aout": 8,
+    "septembre": 9, "octobre": 10, "novembre": 11, "décembre": 12, "decembre": 12,
+}
+
+# French day names to strip
+FRENCH_DAYS = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
+
+
+def parse_french_date(date_str: str | None) -> Optional[str]:
+    """
+    Parse a French date string and return YYYY-MM-DD format.
+
+    Handles formats:
+        - "17 novembre 2025" -> "2025-11-17"
+        - "lundi 17 novembre 2025" -> "2025-11-17"
+        - "17 novembre, 2025" -> "2025-11-17"
+
+    Args:
+        date_str: French date string
+
+    Returns:
+        Date in YYYY-MM-DD format or None if parsing fails
+    """
+    if not date_str or not isinstance(date_str, str):
+        return None
+
+    # Clean the string
+    cleaned = date_str.lower().strip()
+
+    # Remove day name if present
+    for day in FRENCH_DAYS:
+        if cleaned.startswith(day):
+            cleaned = cleaned[len(day):].strip()
+            break
+
+    # Remove commas and extra spaces
+    cleaned = cleaned.replace(",", "").strip()
+    cleaned = " ".join(cleaned.split())  # Normalize spaces
+
+    # Try to parse: "17 novembre 2025"
+    parts = cleaned.split()
+    if len(parts) >= 3:
+        try:
+            day = int(parts[0])
+            month_name = parts[1].lower()
+            year = int(parts[2])
+
+            month = FRENCH_MONTHS.get(month_name)
+            if month:
+                return f"{year:04d}-{month:02d}-{day:02d}"
+        except (ValueError, IndexError):
+            pass
+
+    return None
+
+
+# =============================================================================
 # CURRENCY PARSING UTILITIES
 # =============================================================================
 
@@ -253,9 +316,12 @@ def convert_uv_extraction(extraction, pdf_path: Path) -> UnifiedExtraction:
         )
         unified_protections.append(unified_prot)
 
+    # Parse and format document date to YYYY-MM-DD
+    formatted_date = parse_french_date(extraction.document_date) or extraction.document_date
+
     return UnifiedExtraction(
         source=InsuranceSource.UV,
-        document_date=extraction.document_date,
+        document_date=formatted_date,
         advisor_name=extraction.advisor_name,
         pdf_filename=pdf_path.name,
         insured_persons=[unified_insured],
@@ -304,9 +370,12 @@ def convert_assomption_extraction(extraction, pdf_path: Path) -> UnifiedExtracti
         )
         unified_protections.append(unified_prot)
 
+    # Parse and format document date to YYYY-MM-DD
+    formatted_date = parse_french_date(extraction.document_date) or extraction.document_date
+
     return UnifiedExtraction(
         source=InsuranceSource.ASSOMPTION,
-        document_date=extraction.document_date,
+        document_date=formatted_date,
         advisor_name=extraction.advisor_name,
         pdf_filename=pdf_path.name,
         insured_persons=unified_insured_list,
@@ -326,8 +395,8 @@ def unified_to_dataframe(extraction: UnifiedExtraction) -> pd.DataFrame:
     """
     Convert a UnifiedExtraction to a pandas DataFrame.
 
-    Creates one row per protection, with insured info repeated.
-    For multiple insured persons, uses the primary (first) insured.
+    Creates one row per protection per insured person.
+    Each insured person gets their own set of protection rows.
 
     Args:
         extraction: UnifiedExtraction object
@@ -337,34 +406,33 @@ def unified_to_dataframe(extraction: UnifiedExtraction) -> pd.DataFrame:
     """
     rows = []
 
-    # Use primary insured (first person) for each protection row
-    primary_insured = extraction.insured_persons[0] if extraction.insured_persons else None
-
-    for prot in extraction.protections:
-        row = {
-            # Document info
-            "insurer_name": extraction.source.value,
-            "report_date": extraction.document_date,
-            "advisor_name": extraction.advisor_name,
-            "pdf_filename": extraction.pdf_filename,
-            # Insured info
-            "insured_number": primary_insured.insured_number if primary_insured else "",
-            "last_name": primary_insured.last_name if primary_insured else "",
-            "first_name": primary_insured.first_name if primary_insured else "",
-            "insured_name": primary_insured.insured_name if primary_insured else "",
-            "sex": primary_insured.sex if primary_insured else "",
-            "birth_date": primary_insured.birth_date if primary_insured else None,
-            "age": primary_insured.age if primary_insured else 0,
-            "smoker": primary_insured.smoker if primary_insured else False,
-            # Protection info
-            "product_name": prot.product_name,
-            "coverage_amount": prot.coverage_amount,
-            "policy_premium": prot.policy_premium,
-            "monthly_premium": prot.monthly_premium,
-            "payment_duration": prot.payment_duration,
-            "details": prot.details,
-        }
-        rows.append(row)
+    # Create rows for each insured person with all protections
+    for insured in extraction.insured_persons:
+        for prot in extraction.protections:
+            row = {
+                # Document info
+                "insurer_name": extraction.source.value,
+                "report_date": extraction.document_date,
+                "advisor_name": extraction.advisor_name,
+                "pdf_filename": extraction.pdf_filename,
+                # Insured info
+                "insured_number": insured.insured_number,
+                "last_name": insured.last_name,
+                "first_name": insured.first_name,
+                "insured_name": insured.insured_name,
+                "sex": insured.sex,
+                "birth_date": insured.birth_date,
+                "age": insured.age,
+                "smoker": insured.smoker,
+                # Protection info
+                "product_name": prot.product_name,
+                "coverage_amount": prot.coverage_amount,
+                "policy_premium": prot.policy_premium,
+                "monthly_premium": prot.monthly_premium,
+                "payment_duration": prot.payment_duration,
+                "details": prot.details,
+            }
+            rows.append(row)
 
     df = pd.DataFrame(rows, columns=UNIFIED_COLUMNS)
 
@@ -805,7 +873,7 @@ def main():
         "policy_premium",
         "monthly_premium",
     ]
-    print(df[display_cols].to_string(index=False))
+    print(df.to_string(index=False))
 
     # Generate and print report
     print("\n" + generate_summary_report(df))

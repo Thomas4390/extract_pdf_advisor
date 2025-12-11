@@ -177,3 +177,47 @@ def render_horizontal_rule() -> None:
         "<hr style='margin: 0.5rem 0; border: none; border-top: 1px solid #f0f0f0;'>",
         unsafe_allow_html=True
     )
+
+
+def render_api_key_input() -> None:
+    """Render API key input in sidebar with status indicator."""
+    api_key = st.session_state.get('monday_api_key', '')
+
+    st.markdown("#### 🔐 API Monday.com")
+
+    if api_key:
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+                    color: white; padding: 0.5rem 1rem; border-radius: 8px;
+                    font-size: 0.85rem; margin-bottom: 0.5rem;">
+            ✓ Cle API configuree
+        </div>
+        """, unsafe_allow_html=True)
+
+        if st.button("🔄 Modifier", key="sidebar_change_api_key", width="stretch"):
+            st.session_state.monday_api_key = ""
+            st.session_state.monday_boards = None
+            st.rerun()
+    else:
+        st.markdown("""
+        <div style="background: #fff3cd; color: #856404; padding: 0.5rem 1rem;
+                    border-radius: 8px; font-size: 0.85rem; margin-bottom: 0.5rem;">
+            ⚠️ Cle API requise
+        </div>
+        """, unsafe_allow_html=True)
+
+        new_key = st.text_input(
+            "Cle API",
+            type="password",
+            placeholder="Entrez votre cle API",
+            key="sidebar_api_key_input",
+            label_visibility="collapsed"
+        )
+
+        if st.button("✓ Enregistrer", key="sidebar_save_api_key", width="stretch", type="primary"):
+            if new_key and new_key.strip():
+                st.session_state.monday_api_key = new_key.strip()
+                st.session_state.monday_boards = None
+                st.rerun()
+            else:
+                st.error("Entrez une cle valide")

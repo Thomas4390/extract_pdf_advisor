@@ -102,7 +102,7 @@ def _render_board_assignment_form(user_id: str, boards: list) -> None:
         submitted = st.form_submit_button(
             "💾 Enregistrer",
             type="primary",
-            use_container_width=True
+            width="stretch"
         )
 
         if submitted:

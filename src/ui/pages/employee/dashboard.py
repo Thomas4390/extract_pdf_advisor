@@ -14,7 +14,8 @@ from ui.components import (
     render_board_card,
     render_gradient_header,
     render_info_box,
-    render_divider
+    render_divider,
+    render_api_key_input
 )
 from config import MIN_PASSWORD_LENGTH
 
@@ -54,6 +55,8 @@ def render_employee_dashboard() -> None:
     # Render view based on selection
     if st.session_state.employee_view == 'dashboard':
         _render_dashboard_view(user, user_boards)
+    elif st.session_state.employee_view == 'illustrations':
+        _render_illustrations_view(user, user_boards)
     else:
         _render_add_data_view(user, user_boards)
 
@@ -63,11 +66,15 @@ def _render_sidebar(user) -> None:
     with st.sidebar:
         render_user_header(user.name, user.role, icon="👤")
 
+        render_api_key_input()
+
+        st.markdown("<div style='margin-top: 1.5rem;'></div>", unsafe_allow_html=True)
+
         st.markdown("#### Navigation")
 
         if st.button(
             "📊 Tableau de bord",
-            use_container_width=True,
+            width="stretch",
             type="primary" if st.session_state.employee_view == 'dashboard' else "secondary"
         ):
             st.session_state.employee_view = 'dashboard'
@@ -75,8 +82,16 @@ def _render_sidebar(user) -> None:
             st.rerun()
 
         if st.button(
+            "📄 Illustrations PDF",
+            width="stretch",
+            type="primary" if st.session_state.employee_view == 'illustrations' else "secondary"
+        ):
+            st.session_state.employee_view = 'illustrations'
+            st.rerun()
+
+        if st.button(
             "➕ Ajouter des donnees",
-            use_container_width=True,
+            width="stretch",
             type="primary" if st.session_state.employee_view == 'add_data' else "secondary"
         ):
             st.session_state.employee_view = 'add_data'
@@ -84,8 +99,14 @@ def _render_sidebar(user) -> None:
 
         st.markdown("<div style='margin-top: 2rem;'></div>", unsafe_allow_html=True)
 
-        if st.button("🚪 Deconnexion", use_container_width=True):
+        if st.button("🚪 Deconnexion", width="stretch"):
             logout()
+
+
+def _render_illustrations_view(user, user_boards: list) -> None:
+    """Render illustrations upload view."""
+    from ui.pages.employee.illustrations import render_illustrations_page
+    render_illustrations_page(user, user_boards)
 
 
 def _render_dashboard_view(user, user_boards: list) -> None:
