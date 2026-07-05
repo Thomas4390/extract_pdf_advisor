@@ -11,8 +11,16 @@ import streamlit as st
 from models.user import User
 from services.auth_manager import AuthManager
 
+try:
+    from dotenv import load_dotenv
 
-DEFAULT_MONDAY_API_KEY = "eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjU3OTYxMDI3NiwiYWFpIjoxMSwidWlkIjo5NTA2NjUzNywiaWFkIjoiMjAyNS0xMC0yOFQxNToxMDo0My4wMDBaIiwicGVyIjoibWU6d3JpdGUiLCJhY3RpZCI6MjY0NjQxNDIsInJnbiI6InVzZTEifQ.t8JBXHEnQbwYv5IavgrT2BgKzK3g0zq7cq0juAJiTic"
+    load_dotenv()
+except ImportError:
+    # python-dotenv non installé — variables d'environnement système uniquement
+    pass
+
+
+DEFAULT_MONDAY_API_KEY = ""  # ne jamais coder le token en dur — fourni via MONDAY_API_KEY (.env local / secrets Streamlit Cloud)
 
 
 def init_session_state() -> None:
